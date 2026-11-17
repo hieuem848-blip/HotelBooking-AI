@@ -1,8 +1,8 @@
 import rateLimit from "express-rate-limit";
 
-const createLimiter = (limit, message) =>
+const createLimiter = (limit, message, windowMs = 15 * 60 * 1000) =>
   rateLimit({
-    windowMs: 15 * 60 * 1000,
+    windowMs,
     limit,
     standardHeaders: "draft-7",
     legacyHeaders: false,
@@ -24,4 +24,11 @@ export const authLimiter = createLimiter(
 export const staffLoginLimiter = createLimiter(
   10,
   "Bạn đăng nhập sai quá nhiều lần. Vui lòng đợi 15 phút rồi thử lại.",
+);
+
+// Tối đa 10 đánh giá mỗi giờ để chống gửi hàng loạt
+export const reviewLimiter = createLimiter(
+  10,
+  "Bạn gửi đánh giá quá nhiều. Vui lòng thử lại sau 1 giờ.",
+  60 * 60 * 1000,
 );

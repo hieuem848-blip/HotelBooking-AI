@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Heart, User } from "lucide-react";
+import { Bell, CalendarDays, Heart, Star, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { getUnreadCount } from "../api/notificationApi";
@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 const menuItems = [
   { name: "Hồ sơ cá nhân", path: "/profile", icon: User },
   { name: "Đặt phòng của tôi", path: "/bookings", icon: CalendarDays },
+  { name: "Đánh giá của tôi", path: "/reviews", icon: Star },
   { name: "Wishlist", path: "/wishlist", icon: Heart },
   { name: "Thông báo", path: "/notifications", icon: Bell },
 ];

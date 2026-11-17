@@ -13,6 +13,7 @@ import Offers from "./pages/Offers";
 import Profile from "./pages/Profile";
 import Wishlist from "./pages/Wishlist";
 import StaffLogin from "./pages/StaffLogin";  
+import MyReviews from "./pages/MyReviews";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/reviews" element={<MyReviews />} />
       </Route>
     </Routes>
   );

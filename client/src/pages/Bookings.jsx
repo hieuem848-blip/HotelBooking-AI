@@ -1,7 +1,9 @@
-import { CalendarDays, CheckCircle2, CreditCard, MapPin, XCircle } from "lucide-react";
+import { CalendarDays, CheckCircle2, CreditCard, MapPin, Star, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cancelBooking, getMyBookings, payBooking } from "../api/bookingApi";
+import { createReview, getMyReviews } from "../api/reviewApi";
+import ReviewForm from "../components/ReviewForm";
 
 const money = (n) => new Intl.NumberFormat("vi-VN").format(n);
 
@@ -10,6 +12,12 @@ const fmt = (d) => new Date(d).toLocaleDateString("vi-VN");
 function Bookings() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Các đơn đã được đánh giá, đơn đang viết đánh giá
+  const [reviewedIds, setReviewedIds] = useState(new Set());
+  const [reviewing, setReviewing] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   const load = useCallback(
     () =>
@@ -22,6 +30,35 @@ function Bookings() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    getMyReviews()
+      .then((r) => setReviewedIds(new Set(r.data.map((x) => String(x.bookingId?._id ?? x.bookingId)))))
+      .catch(() => {
+        // Không tải được thì vẫn cho viết đánh giá; server sẽ chặn nếu đơn đã đánh giá
+      });
+  }, []);
+
+  const closeReviewForm = () => {
+    setReviewing(null);
+    setReviewError("");
+  };
+
+  const handleSubmitReview = async (values) => {
+    try {
+      setSubmitting(true);
+      setReviewError("");
+
+      await createReview({ bookingId: reviewing._id, ...values });
+
+      setReviewedIds((prev) => new Set(prev).add(reviewing._id));
+      setReviewing(null);
+    } catch (err) {
+      setReviewError(err.response?.data?.message || "Không thể gửi đánh giá. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div>
@@ -106,6 +143,25 @@ function Bookings() {
                         </button>
                       )}
 
+                      {b.status === "COMPLETED" &&
+                        (reviewedIds.has(b._id) ? (
+                          <Link
+                            to="/reviews"
+                            className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-600"
+                          >
+                            <Star size={16} />
+                            Đã đánh giá
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => setReviewing(b)}
+                            className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white"
+                          >
+                            <Star size={16} />
+                            Viết đánh giá
+                          </button>
+                        ))}
+
                       <Link
                         to={`/hotels/${b.hotelId?.slug}`}
                         className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold"
@@ -129,6 +185,16 @@ function Bookings() {
             Khám phá khách sạn
           </Link>
         </div>
+      )}
+
+      {reviewing && (
+        <ReviewForm
+          hotelName={reviewing.hotelId?.name}
+          submitting={submitting}
+          error={reviewError}
+          onSubmit={handleSubmitReview}
+          onClose={closeReviewForm}
+        />
       )}
     </div>
   );
