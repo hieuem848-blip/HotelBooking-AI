@@ -5,6 +5,7 @@ import {
   Building2,
   User,
   Heart,
+  Star,
   Bell,
   CalendarDays,
   Settings,
@@ -169,6 +170,19 @@ function Navbar() {
                       >
                         <CalendarDays size={18} />
                         Đặt phòng của tôi
+                      </button>
+
+                      {/* reviews */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenProfile(false);
+                          navigate("/reviews");
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-50 hover:text-slate-900"
+                      >
+                        <Star size={18} />
+                        Đánh giá của tôi
                       </button>
 
                       {/* Wishlist */}

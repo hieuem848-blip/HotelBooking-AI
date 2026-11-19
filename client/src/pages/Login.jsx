@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { requestOtp, verifyOtp } from "../api/authApi";
 import SocialLoginButtons from "../components/SocialLoginButtons";
 import { useAuth } from "../context/AuthContext";
@@ -21,6 +21,7 @@ const primaryButtonClass =
  */
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [step, setStep] = useState("email");
@@ -45,9 +46,9 @@ function Login() {
     setError("");
     setSuccess(data.message);
 
-    // Chuyển về Homepage
+    // Quay lại trang đang xem trước khi đăng nhập (ví dụ trang đặt phòng), không có thì về trang chủ
     setTimeout(() => {
-      navigate("/");
+      navigate(location.state?.from || "/");
     }, REDIRECT_DELAY_MS);
   };
 

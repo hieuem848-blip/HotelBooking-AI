@@ -9,10 +9,11 @@ const paymentSchema = new mongoose.Schema(
       index: true,
     },
 
+    // null: thanh toán của khách vãng lai
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
 
     amount: {

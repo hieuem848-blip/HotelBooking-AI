@@ -1,224 +1,32 @@
-import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
 import Payment from "../models/Payment.js";
 import Inventory from "../models/Inventory.js";
-import RoomType from "../models/RoomType.js";
-import Hotel from "../models/Hotel.js";
-import Coupon from "../models/Coupon.js";
 import { createNotification } from "../services/notification.service.js";
-import {dateOnly,nightsBetween,bookingCode} from "../utils/booking.js";
+import * as bookingService from "../services/booking.service.js";
 
-const getInventory = async (roomTypeId, start, end, rooms, session) => {
-    const dates = [];
+// Xem giá, tồn phòng và mã ưu đãi trước khi đặt (công khai)
+export const quoteBooking = async (req, res) => {
+    const data = await bookingService.getQuote(res.locals.query);
 
-    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1))
-        dates.push(new Date(d));
-
-    const docs = await Inventory.find({
-        roomTypeId,
-        date: { $in: dates }
-    }).session(session || null);
-
-    if (docs.length !== dates.length)
-        return {
-            ok: false,
-            message: "Chưa có dữ liệu tồn phòng cho một hoặc nhiều ngày."
-        };
-
-    if (docs.some(x => x.availableRooms < rooms))
-        return {
-            ok: false,
-            message: "Phòng đã hết hoặc không đủ số lượng trong khoảng ngày đã chọn."
-        };
-
-    return { ok: true, docs, dates };
+    res.json({ success: true, data });
 };
 
+// Đặt phòng: khách đã đăng nhập (req.user) hoặc khách vãng lai (không có req.user)
 export const createBooking = async (req, res) => {
-    const session = await mongoose.startSession();
+    const data = await bookingService.createBooking(req.user ?? null, req.body);
 
-    try {
-        const {
-            hotelId,
-            roomTypeId,
-            checkIn,
-            checkOut,
-            adults = 1,
-            children = 0,
-            rooms = 1,
-            guestInfo = {},
-            couponCode = ""
-        } = req.body;
+    res.status(201).json({
+        success: true,
+        message: "Đặt phòng thành công.",
+        data
+    });
+};
 
-        const start = dateOnly(checkIn);
-        const end = dateOnly(checkOut);
+// Khách vãng lai tra cứu đơn bằng mã đặt phòng và email
+export const lookupBooking = async (req, res) => {
+    const data = await bookingService.lookupBooking(res.locals.query);
 
-        if (!start || !end || end <= start)
-            return res.status(400).json({
-                success: false,
-                message: "Ngày nhận/trả phòng không hợp lệ."
-            });
-
-        const nights = nightsBetween(start, end);
-
-        const roomType = await RoomType.findOne({
-            _id: roomTypeId,
-            hotelId,
-            status: "ACTIVE"
-        }).session(session);
-
-        if (!roomType)
-            return res.status(404).json({
-                success: false,
-                message: "Loại phòng không tồn tại."
-            });
-
-        if (Number(adults) + Number(children) > roomType.capacity.total)
-            return res.status(400).json({
-                success: false,
-                message: "Số khách vượt quá sức chứa phòng."
-            });
-
-        const inv = await getInventory(
-            roomTypeId,
-            start,
-            end,
-            Number(rooms),
-            session
-        );
-
-        if (!inv.ok)
-            return res.status(409).json({
-                success: false,
-                message: inv.message
-            });
-
-        let discount = 0,
-            coupon = null;
-
-        if (couponCode) {
-            coupon = await Coupon.findOne({
-                code: couponCode.toUpperCase(),
-                status: "ACTIVE",
-                startDate: { $lte: new Date() },
-                endDate: { $gte: new Date() }
-            }).session(session);
-
-            if (!coupon)
-                return res.status(400).json({
-                    success: false,
-                    message: "Mã ưu đãi không hợp lệ hoặc đã hết hạn."
-                });
-        }
-
-        const subtotal = roomType.basePrice * nights * Number(rooms);
-
-        if (coupon && subtotal >= coupon.minBookingAmount)
-            discount = coupon.discountType === "PERCENTAGE"
-                ? Math.min(
-                    subtotal * coupon.discountValue / 100,
-                    coupon.maxDiscount || Infinity
-                )
-                : Math.min(coupon.discountValue, subtotal);
-
-        const total = Math.max(0, subtotal - discount);
-
-        let booking;
-
-        await session.withTransaction(async () => {
-            for (const item of inv.docs) {
-                await Inventory.updateOne(
-                    {
-                        _id: item._id,
-                        availableRooms: { $gte: Number(rooms) }
-                    },
-                    {
-                        $inc: { availableRooms: -Number(rooms) }
-                    },
-                    { session }
-                );
-            }
-
-            booking = (await Booking.create([
-                {
-                    bookingCode: bookingCode(),
-                    userId: req.user._id,
-                    hotelId,
-                    roomTypeId,
-                    checkIn: start,
-                    checkOut: end,
-                    guests: {
-                        adults: Number(adults),
-                        children: Number(children)
-                    },
-                    rooms: Number(rooms),
-                    guestInfo: {
-                        fullName: guestInfo.fullName || req.user.fullName,
-                        email: guestInfo.email || req.user.email,
-                        phone: guestInfo.phone || req.user.phone,
-                        note: guestInfo.note || ""
-                    },
-                    pricePerNight: roomType.basePrice,
-                    nights,
-                    subtotal,
-                    discount,
-                    totalAmount: total,
-                    couponCode: coupon?.code || "",
-                    status: "CONFIRMED",
-                    paymentStatus: "UNPAID"
-                }
-            ], { session }))[0];
-
-            await Payment.create([
-                {
-                    bookingId: booking._id,
-                    userId: req.user._id,
-                    amount: total,
-                    method: "MOCK",
-                    status: "PENDING"
-                }
-            ], { session });
-
-            if (coupon)
-                await Coupon.updateOne(
-                    { _id: coupon._id },
-                    { $inc: { usedCount: 1 } },
-                    { session }
-                );
-
-            await createNotification(
-                {
-                    userId: req.user._id,
-                    type: "BOOKING_CONFIRMED",
-                    title: "Đặt phòng thành công",
-                    message: `Mã đặt phòng ${booking.bookingCode} đã được tạo.`,
-                    data: { bookingId: booking._id, hotelId }
-                },
-                { session }
-            );
-        });
-
-        const result = await Booking.findById(booking._id)
-            .populate("hotelId", "name slug images address")
-            .populate("roomTypeId", "name basePrice");
-
-        res.status(201).json({
-            success: true,
-            message: "Đặt phòng thành công.",
-            data: result
-        });
-
-    } catch (e) {
-        console.error(e);
-
-        res.status(500).json({
-            success: false,
-            message: "Không thể tạo đặt phòng."
-        });
-
-    } finally {
-        await session.endSession();
-    }
+    res.json({ success: true, data });
 };
 
 export const myBookings = async (req, res) => {

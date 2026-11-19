@@ -14,6 +14,8 @@ import Profile from "./pages/Profile";
 import Wishlist from "./pages/Wishlist";
 import StaffLogin from "./pages/StaffLogin";  
 import MyReviews from "./pages/MyReviews";
+import BookingLookup from "./pages/BookingLookup";
+import BookingSuccess from "./pages/BookingSuccess";
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
       <Route path="/booking" element={<Booking />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/staff/login" element={<StaffLogin />} /> 
+      <Route path="/booking/success" element={<BookingSuccess />} />
+      <Route path="/booking/lookup" element={<BookingLookup />} />    
 
       {/* Các trang tài khoản dùng chung khung 2 cột */}
       <Route element={<AccountLayout />}>

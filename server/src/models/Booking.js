@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 const bookingSchema = new mongoose.Schema({
   bookingCode: { type: String, required: true, unique: true, index: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  // null: khách vãng lai đặt phòng không cần tài khoản
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
   hotelId: { type: mongoose.Schema.Types.ObjectId, ref: "Hotel", required: true, index: true },
   roomTypeId: { type: mongoose.Schema.Types.ObjectId, ref: "RoomType", required: true },
   checkIn: { type: Date, required: true },

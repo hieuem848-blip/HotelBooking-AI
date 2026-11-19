@@ -32,3 +32,16 @@ export const reviewLimiter = createLimiter(
   "Bạn gửi đánh giá quá nhiều. Vui lòng thử lại sau 1 giờ.",
   60 * 60 * 1000,
 );
+
+// Chống đặt phòng hàng loạt (khách vãng lai không cần tài khoản)
+export const bookingLimiter = createLimiter(
+  20,
+  "Bạn đặt phòng quá nhiều lần. Vui lòng thử lại sau 1 giờ.",
+  60 * 60 * 1000,
+);
+
+// Chống dò mã đặt phòng khi tra cứu
+export const lookupLimiter = createLimiter(
+  30,
+  "Bạn tra cứu quá nhiều lần. Vui lòng đợi 15 phút rồi thử lại.",
+);

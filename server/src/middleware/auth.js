@@ -25,6 +25,10 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+// Cho cả khách vãng lai: không có token thì đi tiếp như khách, có token thì token phải hợp lệ
+export const optionalAuthenticate = (req, res, next) =>
+  req.headers.authorization ? authenticate(req, res, next) : next();
+
 export const authorize =
   (...roles) =>
   (req, res, next) =>

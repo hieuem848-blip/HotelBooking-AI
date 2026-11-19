@@ -3,7 +3,7 @@ import { z } from "zod";
 const MIN_BIRTH_YEAR = 1900;
 
 // Bỏ khoảng trắng và ký tự phân cách, đổi đầu số +84 / 84 thành 0
-const normalizePhone = (value) => {
+export const normalizePhone = (value) => {
   const digits = value.replace(/[\s.\-()]/g, "");
 
   if (digits.startsWith("+84")) return `0${digits.slice(3)}`;
